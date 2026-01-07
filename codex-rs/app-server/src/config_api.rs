@@ -7,9 +7,10 @@ use codex_app_server_protocol::ConfigValueWriteParams;
 use codex_app_server_protocol::ConfigWriteErrorCode;
 use codex_app_server_protocol::ConfigWriteResponse;
 use codex_app_server_protocol::JSONRPCErrorError;
+use codex_app_server_protocol::NetworkAccess;
 use codex_app_server_protocol::RequirementListResponse;
 use codex_app_server_protocol::Requirements;
-use codex_app_server_protocol::SandboxModeRequirement;
+use codex_app_server_protocol::SandboxPolicy;
 use codex_core::config::ConfigService;
 use codex_core::config::ConfigServiceError;
 use codex_core::config_loader::ConfigRequirementsToml;
@@ -87,12 +88,19 @@ fn map_requirements_toml_to_api(requirements: ConfigRequirementsToml) -> Require
     }
 }
 
-fn map_sandbox_mode_requirement_to_api(mode: CoreSandboxModeRequirement) -> SandboxModeRequirement {
+fn map_sandbox_mode_requirement_to_api(mode: CoreSandboxModeRequirement) -> SandboxPolicy {
     match mode {
-        CoreSandboxModeRequirement::ReadOnly => SandboxModeRequirement::ReadOnly,
-        CoreSandboxModeRequirement::WorkspaceWrite => SandboxModeRequirement::WorkspaceWrite,
-        CoreSandboxModeRequirement::DangerFullAccess => SandboxModeRequirement::DangerFullAccess,
-        CoreSandboxModeRequirement::ExternalSandbox => SandboxModeRequirement::ExternalSandbox,
+        CoreSandboxModeRequirement::ReadOnly => SandboxPolicy::ReadOnly,
+        CoreSandboxModeRequirement::WorkspaceWrite => SandboxPolicy::WorkspaceWrite {
+            writable_roots: Vec::new(),
+            network_access: false,
+            exclude_tmpdir_env_var: false,
+            exclude_slash_tmp: false,
+        },
+        CoreSandboxModeRequirement::DangerFullAccess => SandboxPolicy::DangerFullAccess,
+        CoreSandboxModeRequirement::ExternalSandbox => SandboxPolicy::ExternalSandbox {
+            network_access: NetworkAccess::Restricted,
+        },
     }
 }
 
@@ -127,9 +135,11 @@ mod tests {
         assert_eq!(
             mapped.allowed_sandbox_modes,
             Some(vec![
-                SandboxModeRequirement::ReadOnly,
-                SandboxModeRequirement::ExternalSandbox,
-            ])
+                SandboxPolicy::ReadOnly,
+                SandboxPolicy::ExternalSandbox {
+                    network_access: NetworkAccess::Restricted
+                },
+            ]),
         );
     }
 }

@@ -714,6 +714,22 @@ mod tests {
     }
 
     #[test]
+    fn serialize_requirements_list() -> Result<()> {
+        let request = ClientRequest::RequirementList {
+            request_id: RequestId::Integer(1),
+            params: None,
+        };
+        assert_eq!(
+            json!({
+                "method": "requirements/list",
+                "id": 1,
+            }),
+            serde_json::to_value(&request)?,
+        );
+        Ok(())
+    }
+
+    #[test]
     fn serialize_account_login_api_key() -> Result<()> {
         let request = ClientRequest::LoginAccount {
             request_id: RequestId::Integer(2),
